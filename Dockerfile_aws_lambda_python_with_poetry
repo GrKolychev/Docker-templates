@@ -1,0 +1,22 @@
+FROM python:3.12 AS builder
+
+ARG POETRY_VIRTUALENVS_IN_PROJECT=true
+ARG POETRY_VIRTUALENVS_OPTIONS_ALWAYS_COPY=true
+
+WORKDIR /app
+
+RUN pip install poetry~=1.7
+
+COPY pyproject.toml poetry.lock README.md ./
+RUN poetry install --only main --no-root --no-directory
+
+COPY src/ ./src/
+RUN poetry install --only main
+
+RUN pip install --target dist .
+
+FROM public.ecr.aws/lambda/python:3.12
+
+COPY --from=builder /app/dist/ ./
+
+CMD ["lambda_function.lambda_handler"]
